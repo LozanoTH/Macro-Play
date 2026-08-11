@@ -144,10 +144,16 @@ std::vector<uint8_t> pathfind(std::string const& lvlString, std::atomic_bool& st
 	}
 
 	Replay2 output;
+	output.author = "Macro Play";
 	for (auto& i : lvlBest.gameStates) {
 	    if (i.frame > 1 && i.button != i.prevPlayer().button)
 	        output.inputs.push_back(gdr::Input(i.frame, 1, false, i.button));
 	}
+	output.sortInputs();
+	if (!output.inputs.empty())
+		output.duration = (float)output.inputs.back().frame / 240.0f;
+	output.framerate = 240.0f;
+	output.gameVersion = 22;
 
 	return output.exportData().unwrapOr({});
 }
