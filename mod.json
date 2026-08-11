@@ -1,5 +1,5 @@
 {
-	"id": "camila314.pathfinder",
+	"id": "lozanoth.macro-play",
 	"gd": {
 		"win": "2.2081",
 		"android": "2.2081",
@@ -7,8 +7,8 @@
 		"ios": "2.2081"
 	},
 	"geode": "5.9.0",
-	"name": "Pathfinder",
-	"developer": "camila314",
+	"name": "Macro Play",
+	"developer": "LozanoTH",
 	"version": "v1.0.0-beta.243",
 	"dependencies": {
 		"geode.node-ids": {
@@ -26,6 +26,6 @@
 	"tags": ["offline", "gameplay", "utility"],
 	"links": {
 	    "community": "https://discord.com/invite/u9m7kqyqxu",
-	    "source": "https://github.com/camila314/pathfinder"
+	    "source": "https://github.com/LozanoTH/Macro-Play"
 	}
 }

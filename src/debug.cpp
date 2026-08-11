@@ -25,7 +25,7 @@ static int frames = 0;
 
 class Replay2 : public gdr::Replay<Replay2, gdr::Input<"">> {
  public:
-    Replay2() : Replay("Pathfinder", 1){}
+    Replay2() : Replay("Macro Play", 1){}
 };
 
 
