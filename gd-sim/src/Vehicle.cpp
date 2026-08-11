@@ -377,6 +377,198 @@ Vehicle wave() {
 	return v;
 }
 
+Vehicle robot() {
+	Vehicle v;
+	v.type = VehicleType::Robot;
+
+	v.enter = +[](Player& p) {
+		if (p.prevPlayer().vehicle.type != VehicleType::Ball)
+			p.velocity = p.velocity / 2;
+
+		if (p.prevPlayer().vehicle.type == VehicleType::Wave)
+			p.velocity = p.velocity / 2;
+	};
+
+	v.clamp = +[](Player& p) {
+		if (p.velocity < -810)
+			p.velocity = -810;
+
+		if (p.gravTop(p.innerHitbox()) >= p.gravCeiling())
+			p.dead = true;
+	};
+
+	v.update = +[](Player& p) {
+		static double accelerations[] = {
+			-2747.52,
+			-2794.1082,
+			-2786.4,
+			-2799.36,
+			-2799.36
+		};
+		p.acceleration = accelerations[p.speed];
+
+		if (p.gravityPortal && p.grav(p.velocity) > 350 && p.speed > 1) {
+			p.acceleration -= 6.48;
+		}
+
+		// Robot rotates freely towards its velocity direction
+		auto diff = p.pos - p.prevPlayer().pos;
+		p.rotation = rad2deg(std::atan2(diff.y, diff.x));
+
+		bool jump = false;
+
+		if (p.grounded) {
+			if (p.input) {
+				jump = true;
+			} else {
+				p.setVelocity(0, true);
+			}
+			p.buffer = false;
+		}
+
+		if (p.upsideDown && p.input && p.coyoteFrames < 10) {
+			jump = true;
+			p.buffer = false;
+		}
+
+		if (jump) {
+			static double jumpHeights[] = {
+				573.481728,
+				603.7217172,
+				616.681728,
+				606.421728,
+				606.421728
+			};
+
+			p.setVelocity(jumpHeights[p.speed], p.prevPlayer().input);
+			p.grounded = false;
+		}
+	};
+
+	v.bounds = 300;
+
+	return v;
+}
+
+Vehicle spider() {
+	Vehicle v;
+	v.type = VehicleType::Spider;
+
+	v.enter = +[](Player& p) {
+		if (p.prevPlayer().vehicle.type != VehicleType::Ball)
+			p.velocity = p.velocity / 2;
+
+		if (p.prevPlayer().vehicle.type == VehicleType::Wave)
+			p.velocity = p.velocity / 2;
+	};
+
+	v.clamp = +[](Player& p) {
+		if (p.velocity < -810)
+			p.velocity = -810;
+
+		if (p.gravTop(p.innerHitbox()) >= p.gravCeiling())
+			p.dead = true;
+	};
+
+	v.update = +[](Player& p) {
+		static double accelerations[] = {
+			-2747.52,
+			-2794.1082,
+			-2786.4,
+			-2799.36,
+			-2799.36
+		};
+		p.acceleration = accelerations[p.speed];
+
+		bool clicked = p.input && !p.prevPlayer().input;
+
+		if (p.grounded) {
+			if (clicked) {
+				static double jumpHeights[] = {
+					573.481728,
+					603.7217172,
+					616.681728,
+					606.421728,
+					606.421728
+				};
+				p.setVelocity(jumpHeights[p.speed], p.prevPlayer().input);
+				p.grounded = false;
+			} else {
+				p.setVelocity(0, true);
+			}
+			p.buffer = false;
+		} else if (clicked) {
+			// Airborne click teleports to the floor (in gravity direction)
+			p.pos.y = p.grav(p.gravFloor() + p.size.y / 2);
+			p.velocity = 0;
+			p.grounded = true;
+		}
+
+		// Spider snaps rotation to the velocity angle like the robot
+		auto diff = p.pos - p.prevPlayer().pos;
+		p.rotation = rad2deg(std::atan2(diff.y, diff.x));
+	};
+
+	v.bounds = 300;
+
+	return v;
+}
+
+Vehicle swing() {
+	Vehicle v;
+	v.type = VehicleType::Swing;
+
+	v.enter = +[](Player& p) {
+		if (p.prevPlayer().vehicle.type == VehicleType::Ufo || p.prevPlayer().vehicle.type == VehicleType::Wave)
+			p.velocity = p.velocity / 4.0;
+		else
+			p.velocity = p.velocity / 2.0;
+	};
+
+	v.clamp = +[](Player& p) {
+		p.buffer = false;
+
+		p.velocity = std::clamp(p.velocity,
+			-810.0,
+			810.0
+		);
+
+		if (p.gravTop(p) > p.gravCeiling()) {
+			if (p.velocity > 0) {
+				p.setVelocity(0, false);
+			}
+			p.pos.y = p.grav(p.gravCeiling()) - p.grav(p.size.y / 2);
+		}
+	};
+
+	v.update = +[](Player& p) {
+		p.buffer = false;
+
+		if (p.grounded)
+			p.setVelocity(0, !p.input);
+
+		// Each click flips gravity
+		if (p.button && !p.prevPlayer().button)
+			p.upsideDown = !p.upsideDown;
+
+		if (p.input) {
+			p.acceleration = p.grav(p.small ? 1643.5872 : 1397.0491);
+		} else {
+			p.acceleration = p.grav(p.small ? -1577.85408 : -1341.1719);
+		}
+
+		if (p.grav(p.pos.y) >= p.gravCeiling()) {
+			p.setVelocity(0, false);
+		}
+
+		rotateFly(p, 0.15f);
+	};
+
+	v.bounds = 300;
+
+	return v;
+}
+
 Vehicle Vehicle::from(VehicleType v) {
 	switch (v) {
 		case VehicleType::Cube:
@@ -389,5 +581,11 @@ Vehicle Vehicle::from(VehicleType v) {
 			return ufo();
 		case VehicleType::Wave:
 			return wave();
+		case VehicleType::Robot:
+			return robot();
+		case VehicleType::Spider:
+			return spider();
+		case VehicleType::Swing:
+			return swing();
 	}
 }

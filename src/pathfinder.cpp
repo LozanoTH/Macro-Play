@@ -6,7 +6,7 @@
 
 class Replay2 : public gdr::Replay<Replay2, gdr::Input<"">> {
  public:
-	Replay2() : Replay("Pathfinder", 1){}
+	Replay2() : Replay("Macro Play", 1){}
 };
 
 struct Level2 : public Level {
@@ -41,7 +41,7 @@ int tryInputs(Level2& lvl, std::set<uint16_t> inputs) {
 		lvl.runFrame(lvl.press);
 	}
 	int final = lvl.currentFrame();
-	float lastX = lvl.latestState().pos.y;
+	float lastX = lvl.latestState().pos.x;
 	float lastY = lvl.latestState().pos.y;
 
 	lvl.rollback(frame);
@@ -72,12 +72,18 @@ std::vector<uint8_t> pathfind(std::string const& lvlString, std::atomic_bool& st
 		std::set<uint16_t> bestInputs;
 		int bestFrame = frame;
 
-		constexpr int iterations = 300; //30
-		for (int i = 0; i < iterations; i++) {
+		// Adaptive iterations: explore harder when stuck, cruise while progressing
+		int iterations = fail > 0 ? 300 : 80;
+		constexpr int window = 60;
 
+		for (int i = 0; i < iterations; i++) {
 			std::set<uint16_t> inputs;
-			for (int i = 0; i < 30; i++) {
-				inputs.insert(frame + dist(rng));
+			int next = frame + 1 + dist(rng) % window;
+			int toggles = 2 + dist(rng) % 6;
+			for (int j = 0; j < toggles; j++) {
+				inputs.insert(next);
+				// Space inputs out so spam clicks are not wasted
+				next += 4 + dist(rng) % 18;
 			}
 
 			int nf = tryInputs(lvl, inputs);
@@ -85,7 +91,9 @@ std::vector<uint8_t> pathfind(std::string const& lvlString, std::atomic_bool& st
 			if (nf > bestFrame) {
 				bestFrame = nf;
 				bestInputs = inputs;
-				if (bestFrame - frame > 500 && fail < 1000)
+
+				// Found the end of the level, commit immediately
+				if (nf >= lvl.currentFrame() + window || bestFrame - frame > 500 && fail < 1000)
 					break;
 			}
 		}
@@ -108,7 +116,9 @@ std::vector<uint8_t> pathfind(std::string const& lvlString, std::atomic_bool& st
 				fail += 50;
 			}
 		} else {
-			for (int i = frame; i < bestFrame - (bestFrame - frame) / 1.5; ++i) {
+			// Commit the chosen input pattern (receding horizon)
+			int horizon = bestFrame - (bestFrame - frame) / 2;
+			for (int i = frame; i < horizon; ++i) {
 				if (bestInputs.contains(i)) {
 					lvl.press = !lvl.press;
 				}
